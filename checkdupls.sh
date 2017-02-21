@@ -2,21 +2,30 @@
 PRG=$(which $1)
 [ -x "$PRG" ] || { echo "Run with prog as arg" ; exit 1; }
 
+OB=checkdupls
+
 echo "Checking $PRG ..."
-ldd -r $PRG | sed -e "s|.*=> ||g" | sed -e "s| .*||g" > $0.libs
-cat $0.libs | xargs readlink -f > $0.libs.u
 
-rm -f $0.out $0.out.libs
-for i in $(cat $0.libs.u | grep -v "linux-gate.so.1" | grep -v "/libc-.*.so" | grep -v "linux-vdso.so") ; do
-	#objdump -p $PRG | grep NEEDED
-	nm -D $i | grep " T " | sed -e "s|.* T ||g" | uniq | tee -a $0.out | sed -e "s|$| $i|g" >> $0.out.libs
+echo -n "Read all libs... "
+ldd -r $PRG | sed -e "s|.*=> ||g" | sed -e "s| .*||g" > $OB.libs
+cat $OB.libs | xargs readlink -f > $OB.libs.u
+wc -l < $OB.libs.u
+
+echo -n "Get all symbols... "
+rm -f $OB.out $OB.out.libs
+for i in $(cat $OB.libs.u | grep -v "linux-gate.so.1" | grep -v "/libc-.*.so" | grep -v "linux-vdso.so") ; do
+	#$OBjdump -p $PRG | grep NEEDED
+	nm -D $i | grep " T " | sed -e "s|.* T ||g" | uniq | tee -a $OB.out | sed -e "s|$| $i|g" >> $OB.out.libs
 done
+wc -l < $OB.out.libs
 
-sort < $0.out | uniq -c | sort -n > $0.out.l
-grep -v " *1 " < $0.out.l | grep -v " _fini$" | grep -v " _init$" > $0.nonuniq
+echo -n "Get all non uniq symbols... "
+sort < $OB.out | uniq -c | sort -n > $OB.out.l
+grep -v " *1 " < $OB.out.l | grep -v " _fini$" | grep -v " _init$" > $OB.nonuniq
+wc -l < $OB.nonuniq
 
-echo "Repeated:"
-for i in $(sed -e "s|.* ||g" < $0.nonuniq) ; do
-	grep -- "^$i " $0.out.libs
+echo "Duplicated symbols:"
+for i in $(sed -e "s|.* ||g" < $OB.nonuniq) ; do
+	grep -- "^$i " $OB.out.libs
 done
 
