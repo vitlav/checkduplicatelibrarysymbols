@@ -8,6 +8,7 @@ fatal()
 
 PRG="$(which "$1" 2>/dev/null)"
 [ -n "$PRG" ] || PRG="$1"
+PRG="$(realpath "$PRG")"
 [ -r "$PRG" ] || fatal "Run with prog or lib as arg, please."
 
 file "$PRG" | grep -q ELF || fatal "$PRG is not ELF executable"
