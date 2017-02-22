@@ -12,6 +12,7 @@ PRG="$(realpath "$PRG")"
 [ -r "$PRG" ] || fatal "Run with prog or lib as arg, please."
 
 file "$PRG" | grep -q ELF || fatal "$PRG is not ELF executable"
+file "$PRG" | grep -q "statically linked" && fatal "$PRG is a statically linked binary, skipping"
 
 # template for temp file names
 OB=checkdupls
