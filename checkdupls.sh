@@ -20,9 +20,9 @@ OB=checkdupls
 echo "Checking $PRG ..."
 
 echo -n "Read all libs... "
-ldd -r $PRG | grep "not found" > $OB.libs.notfound
-ldd -r $PRG | grep "undefined symbol" > $OB.libs.undefined
-ldd -r $PRG | grep -v "not found" | grep -v "undefined symbol" | sed -e "s|.*=> ||g" | sed -e "s| .*||g" > $OB.libs
+LANG=C ldd -r $PRG | grep "not found" > $OB.libs.notfound
+LANG=C ldd -r $PRG | grep "undefined symbol" > $OB.libs.undefined
+LANG=C ldd -r $PRG | grep -v "not found" | grep -v "undefined symbol" | sed -e "s|.*=> ||g" | sed -e "s| .*||g" > $OB.libs
 cat $OB.libs | xargs readlink -f > $OB.libs.u
 wc -l < $OB.libs.u
 
@@ -39,7 +39,7 @@ echo -n "Get all symbols... "
 rm -f $OB.out $OB.out.libs
 for i in $(cat $OB.libs.u | grep -v "linux-gate.so.1" | grep -v "/libc-.*.so" | grep -v "linux-vdso.so" | grep -v "libwayland") ; do
 	#$OBjdump -p $PRG | grep NEEDED
-	nm -D $i | grep " T " | sed -e "s|.* T ||g" | uniq | tee -a $OB.out | sed -e "s|$| $i|g" >> $OB.out.libs
+	LANG=C nm -D $i | grep " T " | sed -e "s|.* T ||g" | uniq | tee -a $OB.out | sed -e "s|$| $i|g" >> $OB.out.libs
 done
 wc -l < $OB.out.libs
 
