@@ -53,3 +53,5 @@ for i in $(sed -e "s|.* ||g" < $OB.nonuniq) ; do
 	grep -- "^$i " $OB.out.libs
 done
 
+[ -s $OB.nonuniq ] && [ -x /usr/bin/eepm ] && echo "$PRG $(eepm qf $PRG) with $(wc -l < $OB.nonuniq) duplicated symbols" >> $OB.found
+
