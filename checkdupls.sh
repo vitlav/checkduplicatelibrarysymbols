@@ -55,3 +55,5 @@ done
 
 [ -s $OB.nonuniq ] && [ -x /usr/bin/eepm ] && echo "$PRG $(eepm qf $PRG) with $(wc -l < $OB.nonuniq) duplicated symbols" >> $OB.found
 
+# error status if there are duplicated symbols
+test ! -s $OB.nonuniq
