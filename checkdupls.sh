@@ -30,16 +30,6 @@ exclude_known()
     grep -E -v "(/ld-linux-.*|linux-gate.so.1|/libc-.*.so|/libc.so.*|/libz.so.*|/libm.so.*|/libpthread.so.*|/libdl.so.*|linux-vdso.so|/libselinux.so.*|libwayland|libpulsecommon|libtheora)"
 }
 
-echo "Checking $PRG ..."
-
-echo -n "Read all libs... "
-LANG=C ldd -r $PRG | grep "not found" > $OB.libs.notfound
-LANG=C ldd -r $PRG | grep "undefined symbol" > $OB.libs.undefined
-LANG=C ldd -r $PRG | grep "statically linked" > $OB.libs.statically
-LANG=C ldd -r $PRG | filter_libs > $OB.libs
-cat $OB.libs | xargs --no-run-if-empty readlink -f > $OB.libs.u
-wc -l < $OB.libs.u
-
 # path $name
 req_libs()
 {
@@ -54,10 +44,15 @@ req_libs()
     done
 }
 
-echo -n "Fill all recursion to $OB.libs.req ..."
-libslist=
-req_libs $PRG $PRG > $OB.libs.req
-echo "DONE"
+echo "Checking $PRG ..."
+
+echo -n "Read all libs... "
+LANG=C ldd -r $PRG | grep "not found" > $OB.libs.notfound
+LANG=C ldd -r $PRG | grep "undefined symbol" > $OB.libs.undefined
+LANG=C ldd -r $PRG | grep "statically linked" > $OB.libs.statically
+LANG=C ldd -r $PRG | filter_libs > $OB.libs
+cat $OB.libs | xargs --no-run-if-empty readlink -f > $OB.libs.u
+wc -l < $OB.libs.u
 
 if [ -s "$OB.libs.notfound" ] ; then
     echo "Not found libs:"
@@ -84,20 +79,30 @@ sort < $OB.out | uniq -c | sort -n > $OB.out.l
 grep -v " *1 " < $OB.out.l | grep -E -v " (_fini|_init|libVersionPoint)$" > $OB.nonuniq
 wc -l < $OB.nonuniq
 
-echo
-echo "Duplicated symbols:"
-rm -f $OB.out.dups
-touch $OB.out.dups
-for i in $(sed -e "s|.* ||g" < $OB.nonuniq) ; do
-	grep -- "^$i " $OB.out.libs | tee -a $OB.out.dups
-done | head -n20
-echo "... (see $OB.out.dups file for full list)"
+if [ -s $OB.nonuniq ] ; then
+    echo
+    echo "Duplicated symbols:"
+    rm -f $OB.out.dups
+    touch $OB.out.dups
+    for i in $(sed -e "s|.* ||g" < $OB.nonuniq) ; do
+    	grep -- "^$i " $OB.out.libs | tee -a $OB.out.dups
+    done | head -n20
+    echo "... (see $OB.out.dups file for full list)"
 
-echo
-echo "Duplicated libs:"
-for i in $(cat $OB.out.dups | sed -e "s|.* ||g" | sort -u) ; do
-	grep --color -- "$i" $OB.libs.req
-done
+    echo
+    echo -n "Fill all recursion to $OB.libs.req ..."
+    libslist=
+    req_libs $PRG $PRG > $OB.libs.req
+    echo "DONE"
+
+    echo
+    echo "Duplicated libs:"
+    for i in $(cat $OB.out.dups | sed -e "s|.* ||g" | sort -u) ; do
+    	grep -- "$i" $OB.libs.req | sed -e "s|$i.*|$i -@|g" | uniq | grep --color -- "$i"
+    done
+else
+    echo "No duplicated symbols"
+fi
 
 [ -s $OB.nonuniq ] && [ -x /usr/bin/eepm ] && echo "$PRG $(eepm --quiet qf $PRG) with $(wc -l < $OB.nonuniq) duplicated symbols" >> $OB.found.dup
 [ -s $OB.libs.undefined ] && [ -x /usr/bin/eepm ] && echo "$PRG $(eepm --quiet qf $PRG) with $(wc -l < $OB.libs.undefined) undefined symbols" >> $OB.found.undef
