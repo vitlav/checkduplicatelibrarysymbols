@@ -98,7 +98,8 @@ if [ -s $OB.nonuniq ] ; then
     echo
     echo "Duplicated libs:"
     for i in $(cat $OB.out.dups | sed -e "s|.* ||g" | sort -u) ; do
-    	grep -- "$i" $OB.libs.req | sed -e "s|$i.*|$i -@|g" | uniq | grep --color -- "$i"
+        [ -x /usr/bin/eepm ] && pkg="($(eepm --quiet qf $i))" || pkg="- @"
+        grep -- "$i" $OB.libs.req | sed -e "s|$i.*|$i $pkg|g" | uniq | grep --color -- "$i"
     done
 else
     echo "No duplicated symbols"
